@@ -90,5 +90,12 @@ Eigen::Matrix4f orthogonalTransform(float n, float f, float fov, float aspect_ra
     S(1, 1) = 1 / t;
     S(2, 2) = 2 / (n - f);
 
-    return S * T;
+    // 现在的投影矩阵将[-50,-0.1]映射到[-1,1]
+    // OpenGL的深度是[0,1]，且越小越近，所以需要把[-1,1]映射到[1,0]
+    // 即先反转再缩放再平移
+    Eigen::Matrix4f R = Eigen::Matrix4f::Identity();
+    R(2, 2) = -0.5; // 翻转+缩放
+    R(2, 3) = 0.5;  // 平移
+
+    return R * S * T;
 }

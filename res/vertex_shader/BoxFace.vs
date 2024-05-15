@@ -19,5 +19,4 @@ void main()
     gl_Position=vec4(aPos,1.0);
     gl_Position=transform*gl_Position;
     gl_Position/=gl_Position.w;
-    gl_Position.z*=-1;
 }

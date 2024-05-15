@@ -143,3 +143,54 @@ public:
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 后两个参数分别为索引类型和IBO偏移量
     }
 };
+
+class UncoloredPlane : public Renderable
+{
+private:
+    unsigned int _count = 0;
+
+public:
+    UncoloredPlane(const std::vector<Eigen::Vector3f> &vertices)
+    {
+        _count = (vertices.size() - 2) * 3;
+        _va.bind();
+        std::vector<float> data;
+        data.reserve(vertices.size() * 3);
+        for (const auto &v : vertices)
+            for (int i : {0, 1, 2})
+                data.push_back(v[i]);
+        VertexBuffer vb(data.data(), data.size() * sizeof(float));
+        vb.bind();
+        std::vector<unsigned int> index;
+        for (unsigned int i = 1; i < vertices.size() - 1; i++)
+        {
+            index.push_back(0);
+            index.push_back(i);
+            index.push_back(i + 1);
+        }
+        IndexBuffer ib(index.data(), index.size() * sizeof(unsigned int));
+        ib.bind();
+        VertexBufferLayout layout;
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
+        layout.bind();
+
+        Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Plane.vs");
+        Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/UncoloredPlane.fs");
+        _shader = ShaderProgram(vertexShader, fragmentShader);
+        _shader.bind();
+        _shader.addUniform("transform");
+
+        _va.unbind();
+        _shader.unbind();
+    }
+
+public:
+    void draw(const Eigen::Matrix4f &VP)
+    {
+        _va.bind();
+        _shader.bind();
+        Eigen::Matrix4f transform = _transform * VP;
+        glUniformMatrix4fv(_shader.uniform("transform"), 1, GL_FALSE, transform.data());
+        glDrawElements(GL_TRIANGLES, _count, GL_UNSIGNED_INT, 0);
+    }
+};

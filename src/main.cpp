@@ -15,6 +15,8 @@
 #include "Math.hpp"
 #include "Time.hpp"
 #include "Renderable.hpp"
+#include "Scene.hpp"
+#include "Camera.hpp"
 
 GLFWwindow *init()
 {
@@ -46,9 +48,9 @@ void setting(GLFWwindow *window)
     // glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
 }
 
-Eigen::Matrix4f getCameraTransform()
+void setCamera(Camera &camera)
 {
-    static const Eigen::Vector3f startE{1, 2, 1};
+    static const Eigen::Vector3f startE{2, 2, 2};
     static const Eigen::Vector3f target{0, 0, 0};
 
     float time = MyTimer::now();
@@ -56,37 +58,31 @@ Eigen::Matrix4f getCameraTransform()
     Eigen::Vector3f e = rotateAroundY(time).block<3, 3>(0, 0) * startE;
     Eigen::Vector3f g = (target - e).normalized();
     Eigen::Vector3f t{0, 1, 0};
-    t -= t.dot(g.normalized()) * g;
 
-    Eigen::Matrix4f V = viewingTransform(e, g, t);
-    return V;
+    camera.set(e, g, t);
 }
 
-Eigen::Matrix4f getPerspectiveTransform()
-{
-    Eigen::Matrix4f P = perspectiveTransform(-0.1, -50);
-    Eigen::Matrix4f O = orthogonalTransform(-0.1, -50, M_PI / 3.0, (float)VIEWPORT_WIDTH / VIEWPORT_HEIGHT);
-    return O * P;
-}
-
-Eigen::Matrix4f getTransform()
-{
-    static const Eigen::Matrix4f P = getPerspectiveTransform();
-    Eigen::Matrix4f V = getCameraTransform();
-    return P * V;
-}
-
+// TODO: 重心坐标插值修正
 int main(void)
 {
     GLFWwindow *window = init();
     setting(window);
 
-    // 配置
-    BoxFace boxFace;
-    Axis axis;
+    // 配置场景
+    Scene scene = Camera();
+    scene.add(std::make_shared<BoxFace>());
+    scene.add(std::make_shared<Axis>());
+    scene.add(std::make_shared<UncoloredPlane>(
+        std::vector<Eigen::Vector3f>{
+        Eigen::Vector3f{-3, -1, -3},
+        Eigen::Vector3f{-3, -1, 3},
+        Eigen::Vector3f{3, -1, 3},
+        Eigen::Vector3f{3, -1, -3},
+    }));
 
     // 开启深度测试
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS); // 深度较小时通过测试
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -97,10 +93,12 @@ int main(void)
         //=================Rendering loop===================
         MyTimer::update();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        setCamera(scene.camera());
 
-        Eigen::Matrix4f transform = getTransform();
-        boxFace.draw(transform);
-        axis.draw(transform);
+        scene.drawAll();
+        scene.object(0)->setTransform(translate(1.0, 1.0, 0.0));
+        scene.draw(0);
+        scene.object(0)->setTransform(translate(0.0, 1.0, 0.0));
         //==================================================
 
         glfwSwapBuffers(window);

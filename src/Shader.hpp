@@ -19,11 +19,11 @@ private:
         std::ifstream ifs(filepath);
         if (!ifs.is_open())
         {
-            std::cerr << "Failed to open file\n";
+            std::cerr << "Failed to open file " << filepath << std::endl;
             exit(-1);
         }
         std::stringstream ss;
-        ss<<ifs.rdbuf();
+        ss << ifs.rdbuf();
         ifs.close();
         _source = ss.str();
     }
