@@ -14,6 +14,7 @@
 #include <eigen3/Eigen/Dense>
 #include "Math.hpp"
 #include "Time.hpp"
+#include "Renderable.hpp"
 
 GLFWwindow *init()
 {
@@ -43,23 +44,6 @@ void setting(GLFWwindow *window)
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height)
                                    { glViewport(0, 0, width, height); });
     // glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-}
-
-template <typename T>
-std::vector<T> loadArray(const char *filepath)
-{
-    std::ifstream ifs(filepath);
-    if (!ifs.is_open())
-    {
-        std::cerr << "Failed to open " << filepath << std::endl;
-        exit(-1);
-    }
-    std::vector<T> data;
-
-    T tmp;
-    while (ifs >> tmp)
-        data.push_back(tmp);
-    return data;
 }
 
 Eigen::Matrix4f getCameraTransform()
@@ -92,117 +76,14 @@ Eigen::Matrix4f getTransform()
     return P * V;
 }
 
-std::pair<VertexArray,ShaderProgram> setObject()
-{
-    // 配置VAO
-    std::vector<float> vertices = loadArray<float>("../res/vertex_attributes/vert.data");
-    std::vector<unsigned int> indices = loadArray<unsigned int>("../res/vertex_attributes/index.data");
-
-    VertexArray va;
-    va.bind();
-    VertexBuffer vb((void *)vertices.data(), vertices.size() * sizeof(float));
-    vb.bind();
-    IndexBuffer ib(indices.data(), indices.size() * sizeof(unsigned int));
-    ib.bind();
-    VertexBufferLayout layout;
-    layout.addElem(GL_FLOAT, 3, GL_FALSE); // pos
-    layout.addElem(GL_FLOAT, 3, GL_FALSE); // color
-    layout.addElem(GL_FLOAT, 2, GL_FALSE); // uv
-    layout.bind();
-    va.unbind();
-
-    // 配置shader
-    Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/vertex_shader.vs");
-    Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/fragment_shader.fs");
-    ShaderProgram shaderProgram(vertexShader, fragmentShader);
-    shaderProgram.unbind();
-
-    return {va,shaderProgram};
-}
-
-std::pair<VertexArray,ShaderProgram> setAxis()
-{
-    // 配置坐标轴VAO和shader
-    float axisPts[] = {
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        2.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        2.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        2.0,
-        0.0,
-        0.0,
-        1.0,
-    };
-    unsigned int axisIdx[] = {
-        0, 1, 0, 2, 0, 3};
-    VertexArray axisVa;
-    axisVa.bind();
-    VertexBuffer axisVb((void *)axisPts, sizeof(axisPts));
-    axisVb.bind();
-    IndexBuffer axisIb(axisIdx, sizeof(axisIdx));
-    axisIb.bind();
-    VertexBufferLayout axisLayout;
-    axisLayout.addElem(GL_FLOAT, 3, false);
-    axisLayout.addElem(GL_FLOAT, 3, false);
-    axisLayout.bind();
-    axisVa.unbind();
-    Shader vertexShaderLine(GL_VERTEX_SHADER, "../res/vertex_shader/line.vs");
-    Shader fragmentShaderLine(GL_FRAGMENT_SHADER, "../res/fragment_shader/line.fs");
-    ShaderProgram shaderProgramLine(vertexShaderLine, fragmentShaderLine);
-    shaderProgramLine.unbind();
-
-    return {axisVa,shaderProgramLine};
-}
-
 int main(void)
 {
     GLFWwindow *window = init();
     setting(window);
 
     // 配置
-    auto[va,shaderProgram]=setObject();
-    auto[axisVa,shaderProgramLine]=setAxis();
-
-    // 配置纹理
-    Texture texture0("../res/container.jpg", GL_RGB);
-    Texture texture1("../res/awesomeface.png", GL_RGBA);
-
-    // 准备绘制
-    va.bind();
-    texture0.bind(0);
-    texture1.bind(1);
-    shaderProgram.bind();
-
-    // 配置uniform变量，这个必须在绑定shader之后
-    shaderProgram.bind();
-    shaderProgram.addUniform("alpha");
-    shaderProgram.addUniform("texture0");
-    glUniform1i(shaderProgram.uniform("texture0"), 0); // 指定纹理slot
-    shaderProgram.addUniform("texture1");
-    glUniform1i(shaderProgram.uniform("texture1"), 1);
-    shaderProgram.addUniform("transform");
-
-    // 配置坐标轴绘制
-    shaderProgramLine.bind();
-    shaderProgramLine.addUniform("transform");
-    shaderProgramLine.unbind();
-    glLineWidth(10.0f);
+    BoxFace boxFace;
+    Axis axis;
 
     // 开启深度测试
     glEnable(GL_DEPTH_TEST);
@@ -218,20 +99,8 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         Eigen::Matrix4f transform = getTransform();
-
-        va.bind();
-        shaderProgram.bind();
-        float timeValue = MyTimer::now();
-        float alpha = sin(timeValue) / 2.0f + 0.5f;
-        glUniform1f(shaderProgram.uniform("alpha"), alpha);
-        glUniformMatrix4fv(shaderProgram.uniform("transform"), 1, GL_FALSE, transform.data());
-        // glDrawArrays(GL_TRIANGLES,0,3);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 后两个参数分别为索引类型和IBO偏移量
-
-        axisVa.bind();
-        shaderProgramLine.bind();
-        glUniformMatrix4fv(shaderProgramLine.uniform("transform"), 1, GL_FALSE, transform.data());
-        glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, 0);
+        boxFace.draw(transform);
+        axis.draw(transform);
         //==================================================
 
         glfwSwapBuffers(window);

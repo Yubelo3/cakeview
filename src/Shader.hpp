@@ -68,6 +68,7 @@ private:
     std::map<std::string, int> _uniforms;
 
 public:
+    ShaderProgram(){};
     ShaderProgram(Shader vertexShader, Shader fragmentShader)
     {
         _id = glCreateProgram();
