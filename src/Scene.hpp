@@ -10,34 +10,46 @@ class Scene
 private:
     std::vector<ObjPtr> _objects;
     Camera _camera;
+    static Scene _instance;
+    Scene(){};
 
 public:
-    Scene(const Camera &camera) : _camera(camera){};
+    Scene(const Scene &) = delete;
 
 public:
-    inline Camera &camera()
+    inline static Scene &get()
     {
-        return _camera;
+        return _instance;
     }
-    inline unsigned int count() const
+    static void setCamera(const Camera &camera)
     {
-        return _objects.size();
+        get()._camera = camera;
     }
-    inline const ObjPtr object(unsigned int i) const
+    inline static Camera &camera()
     {
-        return _objects[i];
+        return get()._camera;
     }
-    void add(ObjPtr object)
+    inline static unsigned int count()
     {
-        _objects.push_back(object);
+        return get()._objects.size();
     }
-    void draw(unsigned int i)
+    inline static const ObjPtr object(unsigned int i)
     {
-        _objects[i]->draw(_camera.VP());
+        return get()._objects[i];
     }
-    void drawAll()
+    void static add(ObjPtr object)
     {
-        for(const auto& p:_objects)
-            p->draw(_camera.VP());
+        get()._objects.push_back(object);
+    }
+    void static draw(unsigned int i)
+    {
+        get()._objects[i]->draw(get()._camera.VP());
+    }
+    void static drawAll()
+    {
+        for (const auto &p : get()._objects)
+            p->draw(get()._camera.VP());
     }
 };
+
+Scene Scene::_instance;

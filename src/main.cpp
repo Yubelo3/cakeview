@@ -17,6 +17,7 @@
 #include "Renderable.hpp"
 #include "Scene.hpp"
 #include "Camera.hpp"
+#include "Input.hpp"
 
 GLFWwindow *init()
 {
@@ -45,21 +46,15 @@ void setting(GLFWwindow *window)
     glClearColor(CLEAR_COLOR[0], CLEAR_COLOR[1], CLEAR_COLOR[2], CLEAR_COLOR[3]);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height)
                                    { glViewport(0, 0, width, height); });
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     // glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-}
+    glfwSetCursorPosCallback(window, mouseCallback);
 
-void setCamera(Camera &camera)
-{
-    static const Eigen::Vector3f startE{2, 2, 2};
-    static const Eigen::Vector3f target{0, 0, 0};
+    // 开启深度测试
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS); // 深度较小时通过测试
 
-    float time = MyTimer::now();
-
-    Eigen::Vector3f e = rotateAroundY(time).block<3, 3>(0, 0) * startE;
-    Eigen::Vector3f g = (target - e).normalized();
-    Eigen::Vector3f t{0, 1, 0};
-
-    camera.set(e, g, t);
+    Scene::camera().set(CAMERA_START_E, CAMERA_START_G, CAMERA_START_T);
 }
 
 // TODO: 重心坐标插值修正
@@ -69,36 +64,27 @@ int main(void)
     setting(window);
 
     // 配置场景
-    Scene scene = Camera();
-    scene.add(std::make_shared<BoxFace>());
-    scene.add(std::make_shared<Axis>());
-    scene.add(std::make_shared<UncoloredPlane>(
-        std::vector<Eigen::Vector3f>{
-        Eigen::Vector3f{-3, -1, -3},
-        Eigen::Vector3f{-3, -1, 3},
-        Eigen::Vector3f{3, -1, 3},
-        Eigen::Vector3f{3, -1, -3},
-    }));
-
-    // 开启深度测试
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS); // 深度较小时通过测试
+    Scene::add(std::make_shared<BoxFace>());
+    Scene::add(std::make_shared<Axis>());
+    // Scene::add(std::make_shared<UncoloredPlane>(
+    //     std::vector<Eigen::Vector3f>{
+    //         Eigen::Vector3f{-3, -1, -3},
+    //         Eigen::Vector3f{-3, -1, 3},
+    //         Eigen::Vector3f{3, -1, 3},
+    //         Eigen::Vector3f{3, -1, -3},
+    //     }));
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
-
-        //=================Rendering loop===================
+        processKeyboard(window);
         MyTimer::update();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        setCamera(scene.camera());
-
-        scene.drawAll();
-        scene.object(0)->setTransform(translate(1.0, 1.0, 0.0));
-        scene.draw(0);
-        scene.object(0)->setTransform(translate(0.0, 1.0, 0.0));
+        //=================Rendering loop===================
+        Scene::drawAll();
+        Scene::object(0)->setTransform(translate(1.0, 1.0, 0.0));
+        Scene::draw(0);
+        Scene::object(0)->setTransform(translate(0.0, 1.0, 0.0));
         //==================================================
 
         glfwSwapBuffers(window);

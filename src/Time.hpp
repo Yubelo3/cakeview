@@ -20,7 +20,7 @@ public:
     }
     static float deltaTime()
     {
-        return get()._lastTime-get()._nowTime;
+        return get()._nowTime-get()._lastTime;
     }
     static void update()
     {
