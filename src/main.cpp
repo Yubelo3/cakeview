@@ -42,19 +42,23 @@ GLFWwindow *init()
 
 void setting(GLFWwindow *window)
 {
-    glViewport(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT); // 视口比窗口小的话，窗口其余部分可以用来显示其他元素
-    glClearColor(CLEAR_COLOR[0], CLEAR_COLOR[1], CLEAR_COLOR[2], CLEAR_COLOR[3]);
+    //输入
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height)
                                    { glViewport(0, 0, width, height); });
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    // glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
     glfwSetCursorPosCallback(window, mouseCallback);
+    glfwSetScrollCallback(window,scrollCallback);
+
+    // glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    glViewport(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT); // 视口比窗口小的话，窗口其余部分可以用来显示其他元素
+    glClearColor(CLEAR_COLOR[0], CLEAR_COLOR[1], CLEAR_COLOR[2], CLEAR_COLOR[3]);
 
     // 开启深度测试
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS); // 深度较小时通过测试
 
     Scene::camera().set(CAMERA_START_E, CAMERA_START_G, CAMERA_START_T);
+    Scene::camera().setFov(FOV);
 }
 
 // TODO: 重心坐标插值修正

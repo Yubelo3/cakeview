@@ -43,12 +43,12 @@ public:
     }
     void static draw(unsigned int i)
     {
-        get()._objects[i]->draw(get()._camera.VP());
+        get()._objects[i]->draw(get()._camera.OPV());
     }
     void static drawAll()
     {
         for (const auto &p : get()._objects)
-            p->draw(get()._camera.VP());
+            p->draw(get()._camera.OPV());
     }
 };
 

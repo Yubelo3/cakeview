@@ -11,30 +11,20 @@ class Camera
     using M4f = Eigen::Matrix4f;
 
 private:
-    V3f _e;  // pos
-    V3f _g;  // look at
-    V3f _t;  // top
-    M4f _P;  // 透视变换基本不变，可以存储
-    M4f _VP; // 每次移动相机时计算
-
-private:
-    void _computeP()
-    {
-        Eigen::Matrix4f P = perspectiveTransform(ZNEAR, ZFAR);
-        Eigen::Matrix4f O = orthogonalTransform(ZNEAR, ZFAR, FOV, (float)VIEWPORT_WIDTH / VIEWPORT_HEIGHT);
-        _P = O * P;
-    }
+    V3f _e; // pos
+    V3f _g; // look at
+    V3f _t; // top
+    float _fov;
+    M4f _O;   // 每次fov变化时计算
+    M4f _P;   // 透视变换基本不变，可以存储
+    M4f _V;   // 每次相机移动时计算
+    M4f _OPV; // 每次相机移动/fov变化时计算
 
 public:
     Camera()
     {
-        _computeP();
-    }
-    Camera(const V3f &e, const V3f &g, const V3f &t)
-    {
-        _computeP();
-        set(e, g, t);
-    }
+        _P = perspectiveTransform(ZNEAR, ZFAR);
+    };
 
 public:
     inline const V3f &e() const
@@ -53,12 +43,18 @@ public:
     {
         _e = e;
         _g = g.normalized();
-        _t = t - t.dot(_g) * _g;
-        _t.normalize();
-        _VP = _P * viewingTransform(_e, _g, _t);
+        _t = t.normalized();
+        _V = viewingTransform(_e, _g, _t);
+        _OPV = _O * _P * _V;
     }
-    inline const M4f &VP() const
+    void setFov(float fov)
     {
-        return _VP;
+        _fov = fov;
+        _O = orthogonalTransform(ZNEAR, ZFAR, fov, (float)VIEWPORT_WIDTH / VIEWPORT_HEIGHT);
+        _OPV = _O * _P * _V;
+    }
+    inline const M4f &OPV() const
+    {
+        return _OPV;
     }
 };

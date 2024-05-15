@@ -10,6 +10,7 @@ const float ZFAR = -50.0f;
 const float FOV = M_PI / 3.0f;
 const float CAMERA_SPEED = 8.0f;
 const float MOUSE_SENSITIVITY = 0.0005f;
+const float ZOOM_SPEED = 0.1f;
 
 const Eigen::Vector3f CAMERA_START_E{2.0f, 2.0f, 2.0f};
 const Eigen::Vector3f CAMERA_START_G{0.0f, 0.0f, -1.0f};

@@ -40,6 +40,16 @@ void mouseCallback(GLFWwindow *window, double x, double y)
     cam.set(cam.e(), newG, newT);
 }
 
+void scrollCallback(GLFWwindow *window, double offsetX, double offsetY)
+{
+    // 应该只有offsetY有用，滚轮上滚是1，下滚是-1
+    static float fov = FOV;
+
+    fov += offsetY * ZOOM_SPEED * -1;
+    fov = std::clamp((double)fov, M_PI / 9.0, M_PI / 1.5);
+    Scene::camera().setFov(fov);
+}
+
 void processKeyboard(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)

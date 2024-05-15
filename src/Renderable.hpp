@@ -78,11 +78,11 @@ public:
     }
 
 public:
-    void draw(const Eigen::Matrix4f &VP)
+    void draw(const Eigen::Matrix4f &OPV)
     {
         _va.bind();
         _shader.bind();
-        Eigen::Matrix4f transform = VP * _transform;
+        Eigen::Matrix4f transform = OPV * _transform;
         glUniformMatrix4fv(_shader.uniform("transform"), 1, GL_FALSE, transform.data());
         glDrawElements(GL_LINES, 6, GL_UNSIGNED_INT, 0);
     }
@@ -127,7 +127,7 @@ public:
     }
 
 public:
-    void draw(const Eigen::Matrix4f &VP)
+    void draw(const Eigen::Matrix4f &OPV)
     {
         _va.bind();
         _shader.bind();
@@ -135,7 +135,7 @@ public:
         float timeValue = MyTimer::now();
         float alpha = sin(timeValue) / 2.0f + 0.5f;
         glUniform1f(_shader.uniform("alpha"), alpha);
-        Eigen::Matrix4f transform = VP * _transform;
+        Eigen::Matrix4f transform = OPV * _transform;
         glUniformMatrix4fv(_shader.uniform("transform"), 1, GL_FALSE, transform.data());
 
         _bindTexture();
@@ -185,11 +185,11 @@ public:
     }
 
 public:
-    void draw(const Eigen::Matrix4f &VP)
+    void draw(const Eigen::Matrix4f &OPV)
     {
         _va.bind();
         _shader.bind();
-        Eigen::Matrix4f transform = _transform * VP;
+        Eigen::Matrix4f transform = _transform * OPV;
         glUniformMatrix4fv(_shader.uniform("transform"), 1, GL_FALSE, transform.data());
         glDrawElements(GL_TRIANGLES, _count, GL_UNSIGNED_INT, 0);
     }
