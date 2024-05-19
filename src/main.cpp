@@ -19,12 +19,13 @@
 #include "Camera.hpp"
 #include "Input.hpp"
 
+
 GLFWwindow *init()
 {
     if (!glfwInit())
         exit(-1);
     /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Hello World", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "cakeview", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -42,12 +43,12 @@ GLFWwindow *init()
 
 void setting(GLFWwindow *window)
 {
-    //输入
+    // 输入
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height)
                                    { glViewport(0, 0, width, height); });
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouseCallback);
-    glfwSetScrollCallback(window,scrollCallback);
+    glfwSetScrollCallback(window, scrollCallback);
 
     // glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
     glViewport(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT); // 视口比窗口小的话，窗口其余部分可以用来显示其他元素
@@ -68,15 +69,17 @@ int main(void)
     setting(window);
 
     // 配置场景
-    Scene::add(std::make_shared<BoxFace>());
+    // Scene::add(std::make_shared<BoxFace>());
     Scene::add(std::make_shared<Axis>());
     // Scene::add(std::make_shared<UncoloredPlane>(
     //     std::vector<Eigen::Vector3f>{
-    //         Eigen::Vector3f{-3, -1, -3},
-    //         Eigen::Vector3f{-3, -1, 3},
-    //         Eigen::Vector3f{3, -1, 3},
-    //         Eigen::Vector3f{3, -1, -3},
+    //         Eigen::Vector3f{-0.25, -0.25, -0.25},
+    //         Eigen::Vector3f{-0.25, -0.25, 0.25},
+    //         Eigen::Vector3f{0.25, -0.25, 0.25},
+    //         Eigen::Vector3f{0.25, -0.25, -0.25},
     //     }));
+    Scene::add(std::make_shared<UntexturedMesh>("../res/models/bunny/bunny.obj",Eigen::Vector3f{0.7,0.8,0.9}));
+    Scene::add(std::make_shared<Point>(Eigen::Vector3f{0,0.4,0.3},Eigen::Vector3f{1,1,1}));
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -86,9 +89,9 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         //=================Rendering loop===================
         Scene::drawAll();
-        Scene::object(0)->setTransform(translate(1.0, 1.0, 0.0));
-        Scene::draw(0);
-        Scene::object(0)->setTransform(translate(0.0, 1.0, 0.0));
+        // Scene::object(0)->setTransform(translate(1.0, 1.0, 0.0));
+        // Scene::draw(0);
+        // Scene::object(0)->setTransform(translate(0.0, 1.0, 0.0));
         //==================================================
 
         glfwSwapBuffers(window);

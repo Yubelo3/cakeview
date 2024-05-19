@@ -6,6 +6,7 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include "Time.hpp"
+#include "OBJ_Loader.h"
 
 class Renderable
 {
@@ -46,6 +47,126 @@ public:
     virtual void draw(const Eigen::Matrix4f &) = 0;
 };
 
+class Point : public Renderable
+{
+public:
+    Point(const Eigen::Vector3f &p, const Eigen::Vector3f &color)
+    {
+        glPointSize(10.0f);
+        _va.bind();
+        float data[] = {p[0], p[1], p[2], color[0], color[1], color[2]};
+        VertexBuffer vb(p.data(), sizeof(float) * 6);
+        vb.bind();
+        VertexBufferLayout layout;
+        layout.addElem(GL_FLOAT,3,GL_FALSE);
+        layout.addElem(GL_FLOAT,3,GL_FALSE);
+        layout.bind();
+        Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Point.vs");
+        Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/Point.fs");
+        _shader = ShaderProgram(vertexShader, fragmentShader);
+        _shader.addUniform("uni_transform");
+
+        _va.unbind();
+        _shader.unbind();
+    }
+
+public:
+    void draw(const Eigen::Matrix4f &_OPV)
+    {
+        _va.bind();
+        _shader.bind();
+        glUniformMatrix4fv(_shader.uniform("uni_transform"), 1, GL_FALSE, _OPV.data());
+        glDrawArrays(GL_POINTS, 0, 1);
+    }
+};
+
+class UntexturedMesh : public Renderable
+{
+private:
+    unsigned int _count = 0;
+    Eigen::Vector3f _color;
+
+public:
+    UntexturedMesh(const char *filepath, const Eigen::Vector3f &color)
+    {
+        _color = color;
+        objl::Loader loader;
+        if (!loader.LoadFile(filepath))
+        {
+            std::cerr << "Failed to load mesh file" << std::endl;
+            exit(-1);
+        }
+
+        std::vector<float> data;
+        for (const objl::Mesh &m : loader.LoadedMeshes)
+        {
+            for (int i = 0; i < m.Vertices.size(); i += 3)
+            {
+                static auto cvt = [](const objl::Vector3 &v) -> Eigen::Vector3f
+                {
+                    float x = v.X, y = v.Y, z = v.Z;
+                    return Eigen::Vector3f{x, y, z};
+                };
+                static auto psh = [&data](const Eigen::Vector3f &v, const Eigen::Vector3f &n)
+                {
+                    data.push_back(v[0]);
+                    data.push_back(v[1]);
+                    data.push_back(v[2]);
+                    data.push_back(n[0]);
+                    data.push_back(n[1]);
+                    data.push_back(n[2]);
+                };
+                Eigen::Vector3f v0 = cvt(m.Vertices[i].Position);
+                Eigen::Vector3f v1 = cvt(m.Vertices[i + 1].Position);
+                Eigen::Vector3f v2 = cvt(m.Vertices[i + 2].Position);
+                Eigen::Vector3f normal = ((v1 - v0).cross(v2 - v0)).normalized();
+                psh(v0, normal);
+                psh(v1, normal);
+                psh(v2, normal);
+            }
+        }
+        _count = data.size() / 6;
+
+        _va.bind();
+        VertexBuffer vb(data.data(), data.size() * sizeof(float));
+        vb.bind();
+        VertexBufferLayout layout;
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
+        layout.bind();
+
+        Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Phong.vs");
+        Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/Phong.fs");
+        _shader = ShaderProgram(vertexShader, fragmentShader);
+        _shader.bind();
+        _shader.addUniform("uni_transform");
+        _shader.addUniform("uni_modelTransform");
+
+        // TODO: 只是临时用
+        _shader.addUniform("uni_lightPos");
+        _shader.addUniform("uni_lightColor");
+        _shader.addUniform("uni_objectColor");
+
+        _va.unbind();
+        _shader.unbind();
+    }
+
+public:
+    void draw(const Eigen::Matrix4f &OPV)
+    {
+        _va.bind();
+        _shader.bind();
+        Eigen::Matrix4f transform = OPV * _transform;
+        glUniformMatrix4fv(_shader.uniform("uni_transform"), 1, GL_FALSE, transform.data());
+        glUniformMatrix4fv(_shader.uniform("uni_modelTransform"), 1, GL_FALSE, _transform.data());
+        glUniform3f(_shader.uniform("uni_objectColor"), _color[0], _color[1], _color[2]);
+        // TODO: 只是临时用
+        glUniform3f(_shader.uniform("uni_lightPos"), 0, 0.4, 0.3);
+        glUniform3f(_shader.uniform("uni_lightColor"), 0.2, 0.2, 0.15);
+        glDrawArrays(GL_TRIANGLES, 0, _count);
+    }
+};
+
 class Axis : public Renderable
 {
 public:
@@ -72,7 +193,7 @@ public:
         _shader.bind();
         _shader.addUniform("transform");
 
-        glLineWidth(10.0f);
+        glLineWidth(3.0f);
         _va.unbind();
         _shader.unbind();
     }

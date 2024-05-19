@@ -66,9 +66,9 @@ void processKeyboard(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         dir = cam.g().cross(cam.t());
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        dir = {0, 1, 0};
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-        dir = {0, -1, 0};
+        dir = {0, 0.6, 0};
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        dir = {0, -0.6, 0};
     Eigen::Vector3f newPos = cam.e() + dir * CAMERA_SPEED * MyTimer::deltaTime();
     cam.set(newPos, cam.g(), cam.t());
 }
