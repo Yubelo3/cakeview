@@ -103,17 +103,8 @@ public:
     {
         return _id;
     }
-    void addUniform(const std::string &name)
+    int uniform(const std::string &name)
     {
-        _uniforms[name] = glGetUniformLocation(id(), name.c_str());
-        if (_uniforms[name] == -1)
-        {
-            std::cerr << "Failed to get uniform location: " << name << std::endl;
-            exit(-1);
-        }
-    }
-    int uniform(const std::string &name) const
-    {
-        return _uniforms.at(name);
+        return glGetUniformLocation(id(),name.c_str());
     }
 };

@@ -1,14 +1,17 @@
 #pragma once
 #include "Camera.hpp"
 #include "Renderable.hpp"
+#include "Light.hpp"
 #include <memory>
 
 class Scene
 {
     using ObjPtr = std::shared_ptr<Renderable>;
+    using LightPtr = std::shared_ptr<Light>;
 
 private:
     std::vector<ObjPtr> _objects;
+    std::vector<LightPtr> _lights;
     Camera _camera;
     static Scene _instance;
     Scene(){};
@@ -41,14 +44,19 @@ public:
     {
         get()._objects.push_back(object);
     }
+    void static add(LightPtr light)
+    {
+        get()._lights.push_back(light);
+    }
     void static draw(unsigned int i)
     {
+        get()._objects[i]->setLights(get()._lights);
         get()._objects[i]->draw(get()._camera.OPV());
     }
     void static drawAll()
     {
-        for (const auto &p : get()._objects)
-            p->draw(get()._camera.OPV());
+        for (int i = 0; i < get()._objects.size(); i++)
+            draw(i);
     }
 };
 

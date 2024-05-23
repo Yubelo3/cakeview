@@ -7,6 +7,8 @@
 #include <eigen3/Eigen/Dense>
 #include "Time.hpp"
 #include "OBJ_Loader.h"
+#include "Light.hpp"
+#include <memory>
 
 class Renderable
 {
@@ -17,16 +19,6 @@ protected:
     Eigen::Matrix4f _transform = Eigen::Matrix4f::Identity();
 
 protected:
-    void _addTextureUniform()
-    {
-        _shader.bind();
-        for (unsigned int i = 0; i < _textures.size(); i++)
-        {
-            std::string varName = "texture";
-            varName += '0' + i;
-            _shader.addUniform(varName);
-        }
-    }
     void _bindTexture()
     {
         _shader.bind();
@@ -44,6 +36,10 @@ public:
     {
         _transform = transform;
     }
+    virtual void setLights(const std::vector<std::shared_ptr<Light>> &lights)
+    {
+        // Do nothing by default
+    }
     virtual void draw(const Eigen::Matrix4f &) = 0;
 };
 
@@ -58,13 +54,12 @@ public:
         VertexBuffer vb(p.data(), sizeof(float) * 6);
         vb.bind();
         VertexBufferLayout layout;
-        layout.addElem(GL_FLOAT,3,GL_FALSE);
-        layout.addElem(GL_FLOAT,3,GL_FALSE);
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
         layout.bind();
         Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Point.vs");
         Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/Point.fs");
         _shader = ShaderProgram(vertexShader, fragmentShader);
-        _shader.addUniform("uni_transform");
 
         _va.unbind();
         _shader.unbind();
@@ -85,6 +80,7 @@ class UntexturedMesh : public Renderable
 private:
     unsigned int _count = 0;
     Eigen::Vector3f _color;
+    const std::vector<std::shared_ptr<Light>> *_lights = nullptr;
 
 public:
     UntexturedMesh(const char *filepath, const Eigen::Vector3f &color)
@@ -139,13 +135,6 @@ public:
         Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/Phong.fs");
         _shader = ShaderProgram(vertexShader, fragmentShader);
         _shader.bind();
-        _shader.addUniform("uni_transform");
-        _shader.addUniform("uni_modelTransform");
-
-        // TODO: 只是临时用
-        _shader.addUniform("uni_lightPos");
-        _shader.addUniform("uni_lightColor");
-        _shader.addUniform("uni_objectColor");
 
         _va.unbind();
         _shader.unbind();
@@ -159,11 +148,25 @@ public:
         Eigen::Matrix4f transform = OPV * _transform;
         glUniformMatrix4fv(_shader.uniform("uni_transform"), 1, GL_FALSE, transform.data());
         glUniformMatrix4fv(_shader.uniform("uni_modelTransform"), 1, GL_FALSE, _transform.data());
-        glUniform3f(_shader.uniform("uni_objectColor"), _color[0], _color[1], _color[2]);
-        // TODO: 只是临时用
-        glUniform3f(_shader.uniform("uni_lightPos"), 0, 0.4, 0.3);
-        glUniform3f(_shader.uniform("uni_lightColor"), 0.2, 0.2, 0.15);
+        if (_lights)
+        {
+            glUniform1i(_shader.uniform("uni_nlights"), _lights->size());
+            for (unsigned int i = 0; i < _lights->size(); i++)
+            {
+                const std::shared_ptr<Light> &l = (*_lights)[i];
+                float I = l->intensity();
+                std::string lightName = "uni_lights[";
+                lightName += '0' + i;
+                lightName += ']';
+                glUniform3f(_shader.uniform(lightName + ".pos"), l->pos()[0], l->pos()[1], l->pos()[2]);
+                glUniform3f(_shader.uniform(lightName + ".color"), l->color()[0] * I, l->color()[1] * I, l->color()[2] * I);
+            }
+        }
         glDrawArrays(GL_TRIANGLES, 0, _count);
+    }
+    void setLights(const std::vector<std::shared_ptr<Light>> &lights)
+    {
+        _lights = &lights;
     }
 };
 
@@ -190,12 +193,9 @@ public:
         Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Axis.vs");
         Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/Axis.fs");
         _shader = ShaderProgram(vertexShader, fragmentShader);
-        _shader.bind();
-        _shader.addUniform("transform");
 
         glLineWidth(3.0f);
         _va.unbind();
-        _shader.unbind();
     }
 
 public:
@@ -233,14 +233,9 @@ public:
         Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/BoxFace.vs");
         Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/BoxFace.fs");
         _shader = ShaderProgram(vertexShader, fragmentShader);
-        _shader.bind();
-        _shader.addUniform("transform");
-        _shader.addUniform("alpha");
-
         // 配置texture
         _textures.push_back(Texture("../res/img/container.jpg", GL_RGB));
         _textures.push_back(Texture("../res/img/awesomeface.png", GL_RGBA));
-        _addTextureUniform();
 
         // 解绑
         _va.unbind();
@@ -298,8 +293,6 @@ public:
         Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Plane.vs");
         Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/UncoloredPlane.fs");
         _shader = ShaderProgram(vertexShader, fragmentShader);
-        _shader.bind();
-        _shader.addUniform("transform");
 
         _va.unbind();
         _shader.unbind();
