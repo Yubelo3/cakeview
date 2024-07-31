@@ -170,6 +170,99 @@ public:
     }
 };
 
+class Mesh : public Renderable
+{
+private:
+    unsigned int _count = 0;
+    const std::vector<std::shared_ptr<Light>> *_lights = nullptr;
+
+public:
+    Mesh(const char *filepath)
+    {
+        objl::Loader loader;
+        if (!loader.LoadFile(filepath))
+        {
+            std::cerr << "Failed to load mesh file" << std::endl;
+            exit(-1);
+        }
+
+        std::vector<float> data;
+        for (const objl::Mesh &m : loader.LoadedMeshes)
+        {
+            for (int i = 0; i < m.Vertices.size(); i += 3)
+            {
+                static auto cvt = [](const objl::Vector3 &v) -> Eigen::Vector3f
+                {
+                    float x = v.X, y = v.Y, z = v.Z;
+                    return Eigen::Vector3f{x, y, z};
+                };
+                static auto psh = [&data](const Eigen::Vector3f &v, const Eigen::Vector3f &n)
+                {
+                    data.push_back(v[0]);
+                    data.push_back(v[1]);
+                    data.push_back(v[2]);
+                    data.push_back(n[0]);
+                    data.push_back(n[1]);
+                    data.push_back(n[2]);
+                };
+                Eigen::Vector3f v0 = cvt(m.Vertices[i].Position);
+                Eigen::Vector3f v1 = cvt(m.Vertices[i + 1].Position);
+                Eigen::Vector3f v2 = cvt(m.Vertices[i + 2].Position);
+                Eigen::Vector3f normal = ((v1 - v0).cross(v2 - v0)).normalized();
+                psh(v0, normal);
+                psh(v1, normal);
+                psh(v2, normal);
+            }
+        }
+        _count = data.size() / 6;
+
+        _va.bind();
+        VertexBuffer vb(data.data(), data.size() * sizeof(float));
+        vb.bind();
+        VertexBufferLayout layout;
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
+        layout.addElem(GL_FLOAT, 3, GL_FALSE);
+        layout.bind();
+
+        Shader vertexShader(GL_VERTEX_SHADER, "../res/vertex_shader/Phong.vs");
+        Shader fragmentShader(GL_FRAGMENT_SHADER, "../res/fragment_shader/Phong.fs");
+        _shader = ShaderProgram(vertexShader, fragmentShader);
+        _shader.bind();
+
+        _va.unbind();
+        _shader.unbind();
+    }
+
+public:
+    void draw(const Eigen::Matrix4f &OPV)
+    {
+        _va.bind();
+        _shader.bind();
+        Eigen::Matrix4f transform = OPV * _transform;
+        glUniformMatrix4fv(_shader.uniform("uni_transform"), 1, GL_FALSE, transform.data());
+        glUniformMatrix4fv(_shader.uniform("uni_modelTransform"), 1, GL_FALSE, _transform.data());
+        if (_lights)
+        {
+            glUniform1i(_shader.uniform("uni_nlights"), _lights->size());
+            for (unsigned int i = 0; i < _lights->size(); i++)
+            {
+                const std::shared_ptr<Light> &l = (*_lights)[i];
+                float I = l->intensity();
+                std::string lightName = "uni_lights[";
+                lightName += '0' + i;
+                lightName += ']';
+                glUniform3f(_shader.uniform(lightName + ".pos"), l->pos()[0], l->pos()[1], l->pos()[2]);
+                glUniform3f(_shader.uniform(lightName + ".color"), l->color()[0] * I, l->color()[1] * I, l->color()[2] * I);
+            }
+        }
+        glDrawArrays(GL_TRIANGLES, 0, _count);
+    }
+    void setLights(const std::vector<std::shared_ptr<Light>> &lights)
+    {
+        _lights = &lights;
+    }
+};
+
 class Axis : public Renderable
 {
 public:
